@@ -1,0 +1,84 @@
+{
+  "description": "Detects XSS",
+  "edition": 2,
+  "graph": {
+    "edges": [
+      {
+        "source": {
+          "exec_alias": "exec",
+          "node_id": 0
+        },
+        "target": {
+          "exec_alias": "exec",
+          "node_id": 2
+        }
+      },
+      {
+        "source": {
+          "exec_alias": "exec",
+          "node_id": 2
+        },
+        "target": {
+          "exec_alias": "exec",
+          "node_id": 1
+        }
+      }
+    ],
+    "nodes": [
+      {
+        "alias": "on_intercept_request",
+        "definition_id": "caido/on-intercept-request",
+        "display": {
+          "x": 0,
+          "y": 0
+        },
+        "id": 0,
+        "inputs": [],
+        "name": "On intercept request",
+        "version": "0.1.0"
+      },
+      {
+        "alias": "passive_end",
+        "definition_id": "caido/passive-end",
+        "display": {
+          "x": 0,
+          "y": 280
+        },
+        "id": 1,
+        "inputs": [],
+        "name": "Passive End",
+        "version": "0.1.0"
+      },
+      {
+        "alias": "javascript",
+        "definition_id": "caido/http-code-js",
+        "display": {
+          "x": -10,
+          "y": 150
+        },
+        "id": 2,
+        "inputs": [
+          {
+            "alias": "request",
+            "value": {
+              "data": "$on_intercept_request.request",
+              "kind": "ref"
+            }
+          },
+          {
+            "alias": "code",
+            "value": {
+              "data": "export async function run({ request, response }, sdk) {\n  const PAYLOAD = 'xxx\"xxx<xxx>';\n  if (request) {\n\n\n    // Get query parameters\n    const params = request.getQuery();\n    const pattern = /=(.*?)(&|$)/g;\n    const replacedQuery = params.replace(pattern, `=${PAYLOAD}$2`);\n\n    // Set new query parameters\n    const spec = request.toSpec();\n    spec.setQuery(replacedQuery);\n\n    // Check for XSS characters in response\n    const result = await sdk.requests.send(spec);\n    const data = result.response.getBody().toText();\n    sdk.console.log(data)\n\n    if(data.includes(PAYLOAD)){\n      await sdk.findings.create({\n        reporter: \"XSS Detection\",\n        title: \"XSS found\",\n        description: \"\",\n        request: result.request\n      })\n    }  \n  }\n}\n",
+              "kind": "string"
+            }
+          }
+        ],
+        "name": "Javascript",
+        "version": "0.1.0"
+      }
+    ]
+  },
+  "id": "dd7dba36-bc66-4b27-bdcc-0ca0c34a096d",
+  "kind": "passive",
+  "name": "XSS"
+}
